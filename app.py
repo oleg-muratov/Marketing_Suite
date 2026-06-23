@@ -190,52 +190,52 @@ by_source["lead_to_job"]   = by_source["jobs"]  / by_source["leads"]
 st.dataframe(by_source)
 st.bar_chart(by_source, x="source", y="cost_per_lead")
 
-# ──────────────────────────────────────────────────────────────
-# Live website analytics from GA4 (real data via the Data API)
-# ──────────────────────────────────────────────────────────────
-import os
-import pandas as pd
-from google.oauth2 import service_account
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Dimension, Metric
+# # ──────────────────────────────────────────────────────────────
+# # Live website analytics from GA4 (real data via the Data API)
+# # ──────────────────────────────────────────────────────────────
+# import os
+# import pandas as pd
+# from google.oauth2 import service_account
+# from google.analytics.data_v1beta import BetaAnalyticsDataClient
+# from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Dimension, Metric
 
-st.divider()
-st.header("🌐 Website analytics — live from GA4")
+# st.divider()
+# st.header("🌐 Website analytics — live from GA4")
 
-GA4_PROPERTY_ID = "542902265"
+# GA4_PROPERTY_ID = "542902265"
 
-@st.cache_data(ttl=3600)   # cache for 1 hour so we don't hit the API on every interaction
-def load_ga4():
-    creds = service_account.Credentials.from_service_account_info(
-        dict(st.secrets["gcp_service_account"]),
-        scopes=["https://www.googleapis.com/auth/analytics.readonly"],
-    )
-    client = BetaAnalyticsDataClient(credentials=creds)
-    request = RunReportRequest(
-        property=f"properties/{GA4_PROPERTY_ID}",
-        dimensions=[Dimension(name="date")],
-        metrics=[Metric(name="activeUsers"), Metric(name="screenPageViews")],
-        date_ranges=[DateRange(start_date="28daysAgo", end_date="today")],
-    )
-    response = client.run_report(request)
-    dims = [h.name for h in response.dimension_headers]
-    mets = [h.name for h in response.metric_headers]
-    records = []
-    for row in response.rows:
-        rec = {d: row.dimension_values[i].value for i, d in enumerate(dims)}
-        rec.update({m: row.metric_values[i].value for i, m in enumerate(mets)})
-        records.append(rec)
-    df = pd.DataFrame(records)
-    for m in mets:
-        df[m] = pd.to_numeric(df[m])
-    df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
-    return df.sort_values("date")
+# @st.cache_data(ttl=3600)   # cache for 1 hour so we don't hit the API on every interaction
+# def load_ga4():
+#     creds = service_account.Credentials.from_service_account_info(
+#         dict(st.secrets["gcp_service_account"]),
+#         scopes=["https://www.googleapis.com/auth/analytics.readonly"],
+#     )
+#     client = BetaAnalyticsDataClient(credentials=creds)
+#     request = RunReportRequest(
+#         property=f"properties/{GA4_PROPERTY_ID}",
+#         dimensions=[Dimension(name="date")],
+#         metrics=[Metric(name="activeUsers"), Metric(name="screenPageViews")],
+#         date_ranges=[DateRange(start_date="28daysAgo", end_date="today")],
+#     )
+#     response = client.run_report(request)
+#     dims = [h.name for h in response.dimension_headers]
+#     mets = [h.name for h in response.metric_headers]
+#     records = []
+#     for row in response.rows:
+#         rec = {d: row.dimension_values[i].value for i, d in enumerate(dims)}
+#         rec.update({m: row.metric_values[i].value for i, m in enumerate(mets)})
+#         records.append(rec)
+#     df = pd.DataFrame(records)
+#     for m in mets:
+#         df[m] = pd.to_numeric(df[m])
+#     df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
+#     return df.sort_values("date")
 
-try:
-    ga = load_ga4()
-    g1, g2 = st.columns(2)
-    g1.metric("Active users (28d)", f"{ga['activeUsers'].sum():,}")
-    g2.metric("Pageviews (28d)",    f"{ga['screenPageViews'].sum():,}")
-    st.line_chart(ga, x="date", y=["activeUsers", "screenPageViews"])
-except Exception:
-    st.info("Live GA4 data isn't available in this environment (credentials not configured here).")
+# try:
+#     ga = load_ga4()
+#     g1, g2 = st.columns(2)
+#     g1.metric("Active users (28d)", f"{ga['activeUsers'].sum():,}")
+#     g2.metric("Pageviews (28d)",    f"{ga['screenPageViews'].sum():,}")
+#     st.line_chart(ga, x="date", y=["activeUsers", "screenPageViews"])
+# except Exception:
+#     st.info("Live GA4 data isn't available in this environment (credentials not configured here).")
